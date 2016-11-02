@@ -15,19 +15,20 @@ class BaseModel(pw.Model):
 
 class Place(BaseModel):
     """Twitter API json "place" key"""
-    place_type = pw.CharField()
-    country_code = pw.CharField()
-    country = pw.CharField()
-    name = pw.CharField()
-    full_name = pw.CharField()
-    url = pw.CharField()  # URL to json polygon of place boundary
-    bounding_box_coordinates = pw.CharField()  # json list of 4 [lat, lon] pairs
+    id = pw.CharField()
+    place_type = pw.CharField(null=True)
+    country_code = pw.CharField(null=True)
+    country = pw.CharField(null=True)
+    name = pw.CharField(null=True)
+    full_name = pw.CharField(null=True)
+    url = pw.CharField(null=True)  # URL to json polygon of place boundary
+    bounding_box_coordinates = pw.CharField(null=True)  # json list of 4 [lat, lon] pairs
 
 
 class User(BaseModel):
-    # id = pw.BigIntegerField()
+    # id = pw.BigIntegerField(primary_key=True)
     screen_name = pw.CharField(unique=True)
-    # location = pw.ForeignKey(Place)
+    location = pw.ForeignKeyField(Place, null=True)
     followers_count = pw.IntegerField(null=True)
     created_date = pw.DateTimeField(default=datetime.datetime.now)
     statuses_count = pw.IntegerField(null=True)
@@ -38,27 +39,22 @@ class User(BaseModel):
 class Tweet(BaseModel):
     id = pw.BigIntegerField(null=True)
     id_str = pw.CharField(null=True)
+    in_reply_to_id_str = pw.CharField(null=True, default=None)
+    in_reply_to = pw.ForeignKeyField('self', null=True, related_name='replies')
     user = pw.ForeignKeyField(User, null=True, related_name='tweets')
     source = pw.CharField(null=True)  # e.g. "Twitter for iPhone"
-    text = pw.CharField()
+    text = pw.CharField(null=True)
     tags = pw.CharField(null=True)  # e.g. "#sarcasm #angry #trumped"
     created_date = pw.DateTimeField(default=datetime.datetime.now)
     location = pw.CharField(null=True)
     place = pw.ForeignKeyField(Place, null=True)
     verified = pw.BooleanField(null=True)
     favorite_count = pw.IntegerField(default=0)
-    # tweet_replied_to = pw.ForeignKeyField("Tweet", related_name='replies')
-
-
-class Reply(BaseModel):
-    # in_reply_to_status_id
-    tweet_replied_to = pw.ForeignKeyField(Tweet, related_name='replies')
-    tweet = pw.ForeignKeyField(Tweet, related_name='prompts')
 
 
 def create_tables():
     db.connect()
-    db.create_tables([Place, User, Tweet, Reply])
+    db.create_tables([Place, User, Tweet])
 
 
 class Serializer(object):

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import time
 import random
 import sys
@@ -85,22 +87,42 @@ class Bot:
             friends_count=tweet.user.friends_count,
             favourites_count=tweet.user.favourites_count,
             )
-        # FIXME: tweet text should be unique
-        #        dynamic attributes should be a dated list (jsonfield)
-        tweet_record, created = model.Tweet.create_or_get(  # id=tweet.id,
-            id=tweet.id,
-            id_str=tweet.id_str,
-            user=user_record,
-            favorite_count=tweet.favorite_count,
-            text=tweet.text,
-            tags=' '.join(sorted(tag_list)))
-        id_str = tweet.in_reply_to_status_id_str
-        if id_str:
-            tweet_replied_to, created = model.Tweet.create_or_get(id_str=id_str)
+
+        # First find or create the replied to Tweet
+        in_reply_to_id_str = tweet.in_reply_to_status_id_str
+        if in_reply_to_id_str:
+            in_reply_to, created = model.Tweet.create_or_get(
+                id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
             if created:
                 print("We don't have the tweet ({}) that this ({}) was a reply to , but we could GET it ;)".format(
-                    id_str, tweet.id_str))
-            model.Reply.create_or_get(tweet=tweet_record, tweet_replied_to=tweet_replied_to)
+                    in_reply_to_id_str, tweet.id_str))
+            else:
+                print("We found the Tweet that this was a reply to! {}".format(in_reply_to_id_str))
+                print("Prompt: " + in_reply_to.text)
+                print("Reply: " + tweet.text)
+        place = tweet.place
+        if place:
+            place, created = model.Place.create_or_get(
+                id=tweet.place.id)
+            place.url = tweet.place.url
+            place.name = tweet.place.name
+            place.full_name = tweet.place.full_name
+            place.place_type = tweet.place.place_type
+            place.country = tweet.place.country
+            place.country_code = tweet.place.country_code
+            place.bounding_box_coordinates = str(tweet.place.bounding_box.coordinates)
+            place.save()
+        tweet_record, created = model.Tweet.create_or_get(id=tweet.id)
+        tweet_record.in_reply_to_id_str = in_reply_to_id_str
+        tweet_record.in_reply_to = int(in_reply_to_id_str) if in_reply_to_id_str else None
+        tweet_record.id_str = tweet.id_str
+        tweet_record.place = place
+        tweet_record.user = user_record
+        tweet_record.favorite_count = tweet.favorite_count
+        tweet_record.text = tweet.text
+        tweet_record.source = tweet.source
+        tweet_record.tags = ' '.join(sorted(tag_list))
+        tweet_record.save()
         return tweet_record
 
     def clean_tweet(self, tweet):
@@ -149,7 +171,7 @@ if __name__ == '__main__':
     args = parse_args(sys.argv)
     bot = Bot()
     min_delay = 0.5
-    delay_std = args['delay'] * 0.10
+    delay_std = args['delay'] * 0.1
 
     while True:
         num_before = bot.count()
