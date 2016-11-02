@@ -5,7 +5,7 @@ import peewee as pw
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
 
-db = pw.SqliteDatabase('tweets.db')
+db = pw.SqliteDatabase('tweets_v2.db')
 
 
 class BaseModel(pw.Model):

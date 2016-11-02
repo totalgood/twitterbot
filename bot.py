@@ -78,19 +78,28 @@ class Bot:
 
     def save_tweet(self, tweet):
         tag_list = [d['text'] for d in tweet.entities.get('hashtags', [])]
-        # FIXME probably maintain unique User list based on id_str alone
-        #       keep track of dynamic attributes over time as dated lists (jsonfields or related tables)
-        user_record, created = model.User.create_or_get(
-            screen_name=tweet.user.screen_name,
-            followers_count=tweet.user.followers_count,
-            statuses_count=tweet.user.statuses_count,
-            friends_count=tweet.user.friends_count,
-            favourites_count=tweet.user.favourites_count,
-            )
 
-        # First find or create the replied to Tweet
+        # Find or create the user that tweeted
+        user, created = model.User.create_or_get(
+            id=tweet.user.id
+            )
+        user.verified = tweet.user.verified  # v4
+        user.time_zone = tweet.user.time_zone  # v4
+        user.utc_offset = tweet.user.utc_offset  # -28800 (v4)
+        user.protected = tweet.user.protected  # v4
+        user.location = tweet.user.location  # Houston, TX  (v4)
+        user.lang = tweet.user.lang  # en  (v4)
+        user.screen_name = tweet.user.screen_name
+        user.followers_count = tweet.user.followers_count
+        user.statuses_count = tweet.user.statuses_count
+        user.friends_count = tweet.user.friends_count
+        user.favourites_count = tweet.user.favourites_count
+        user.save()
+
+        # Find or create the tweet this tweet is replying to
         in_reply_to_id_str = tweet.in_reply_to_status_id_str
         if in_reply_to_id_str:
+            # TODO: could also create the user that this replies to
             in_reply_to, created = model.Tweet.create_or_get(
                 id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
             if created:
@@ -100,8 +109,11 @@ class Bot:
                 print("We found the Tweet that this was a reply to! {}".format(in_reply_to_id_str))
                 print("Prompt: " + in_reply_to.text)
                 print("Reply: " + tweet.text)
-        place = tweet.place
-        if place:
+        else:
+            in_reply_to = None
+
+        # Find or create a Place for the location of this tweet
+        if tweet.place:
             place, created = model.Place.create_or_get(
                 id=tweet.place.id)
             place.url = tweet.place.url
@@ -112,12 +124,16 @@ class Bot:
             place.country_code = tweet.place.country_code
             place.bounding_box_coordinates = str(tweet.place.bounding_box.coordinates)
             place.save()
+        else:
+            place = None
+
+        # Finally we can create the Tweet DB record that depends on all the others
         tweet_record, created = model.Tweet.create_or_get(id=tweet.id)
         tweet_record.in_reply_to_id_str = in_reply_to_id_str
-        tweet_record.in_reply_to = int(in_reply_to_id_str) if in_reply_to_id_str else None
+        tweet_record.in_reply_to = in_reply_to
         tweet_record.id_str = tweet.id_str
         tweet_record.place = place
-        tweet_record.user = user_record
+        tweet_record.user = user
         tweet_record.favorite_count = tweet.favorite_count
         tweet_record.text = tweet.text
         tweet_record.source = tweet.source
