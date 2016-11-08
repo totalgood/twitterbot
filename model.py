@@ -42,7 +42,6 @@ class User(BaseModel):
 
 
 class Tweet(BaseModel):
-    id = pw.BigIntegerField(null=True)
     id_str = pw.CharField(null=True)
     in_reply_to_id_str = pw.CharField(null=True, default=None)
     in_reply_to = pw.ForeignKeyField('self', null=True, related_name='replies')

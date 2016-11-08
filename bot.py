@@ -103,14 +103,14 @@ class Bot:
         if in_reply_to_id_str:
             # TODO: could also create the user that this replies to
             try:
-                in_reply_to = model.Tweet.get(id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
+                in_reply_to = model.Tweet.get(id_str=in_reply_to_id_str)
                 print("We found the Tweet that this was a reply to! {}".format(in_reply_to_id_str))
                 print("Prompt: " + in_reply_to.text)
                 print("Reply: " + tweet.text)
             except model.Tweet.DoesNotExist:
                 print("We don't have the tweet ({}) that this ({}) was a reply to , but we could GET it ;)".format(
                     in_reply_to_id_str, tweet.id_str))
-                in_reply_to = model.Tweet(id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
+                in_reply_to = model.Tweet(id_str=in_reply_to_id_str)
         else:
             in_reply_to = None
 
@@ -133,9 +133,9 @@ class Bot:
 
         # Finally we can create the Tweet DB record that depends on all the others
         try:
-            tweet_record = model.Tweet.get(id=tweet.id)
+            tweet_record = model.Tweet.get(id_str=tweet.id_str)
         except model.Tweet.DoesNotExist:
-            tweet_record = model.Tweet(id=tweet.id)
+            tweet_record = model.Tweet(id_str=tweet.id_str)
         tweet_record.in_reply_to_id_str = in_reply_to_id_str
         tweet_record.in_reply_to = in_reply_to
         tweet_record.id_str = tweet.id_str
