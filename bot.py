@@ -38,9 +38,10 @@ class Bot:
         tweet_list = self.api.search(q=search_tag,
                                      count=quantity,
                                      lang='en')
-        print("Retrieved {} tweets starting with:".format(len(tweet_list)))
-        if tweet_list:
-            print(tweet_list[0])
+        print("Retrieved {} tweets.".format(len(tweet_list)))
+        # print(" starting with:")
+        # if tweet_list:
+        #     print(tweet_list[0])
 
         return tweet_list
 
@@ -80,9 +81,10 @@ class Bot:
         tag_list = [d['text'] for d in tweet.entities.get('hashtags', [])]
 
         # Find or create the user that tweeted
-        user, created = model.User.create_or_get(
-            id=tweet.user.id
-            )
+        try:
+            user = model.User.get(id=tweet.user.id)
+        except model.User.DoesNotExist:
+            user = model.User(id=tweet.user.id)
         user.verified = tweet.user.verified  # v4
         user.time_zone = tweet.user.time_zone  # v4
         user.utc_offset = tweet.user.utc_offset  # -28800 (v4)
@@ -100,22 +102,24 @@ class Bot:
         in_reply_to_id_str = tweet.in_reply_to_status_id_str
         if in_reply_to_id_str:
             # TODO: could also create the user that this replies to
-            in_reply_to, created = model.Tweet.create_or_get(
-                id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
-            if created:
-                print("We don't have the tweet ({}) that this ({}) was a reply to , but we could GET it ;)".format(
-                    in_reply_to_id_str, tweet.id_str))
-            else:
+            try:
+                in_reply_to = model.Tweet.get(id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
                 print("We found the Tweet that this was a reply to! {}".format(in_reply_to_id_str))
                 print("Prompt: " + in_reply_to.text)
                 print("Reply: " + tweet.text)
+            except model.Tweet.DoesNotExist:
+                print("We don't have the tweet ({}) that this ({}) was a reply to , but we could GET it ;)".format(
+                    in_reply_to_id_str, tweet.id_str))
+                in_reply_to = model.Tweet(id=int(in_reply_to_id_str), id_str=in_reply_to_id_str)
         else:
             in_reply_to = None
 
         # Find or create a Place for the location of this tweet
         if tweet.place:
-            place, created = model.Place.create_or_get(
-                id=tweet.place.id)
+            try:
+                place = model.Place.get(id_str=tweet.place.id)
+            except model.Place.DoesNotExist:
+                place = model.Place(id_str=tweet.place.id)
             place.url = tweet.place.url
             place.name = tweet.place.name
             place.full_name = tweet.place.full_name
@@ -128,7 +132,10 @@ class Bot:
             place = None
 
         # Finally we can create the Tweet DB record that depends on all the others
-        tweet_record, created = model.Tweet.create_or_get(id=tweet.id)
+        try:
+            tweet_record = model.Tweet.get(id=tweet.id)
+        except model.Tweet.DoesNotExist:
+            tweet_record = model.Tweet(id=tweet.id)
         tweet_record.in_reply_to_id_str = in_reply_to_id_str
         tweet_record.in_reply_to = in_reply_to
         tweet_record.id_str = tweet.id_str
@@ -139,6 +146,7 @@ class Bot:
         tweet_record.source = tweet.source
         tweet_record.tags = ' '.join(sorted(tag_list))
         tweet_record.save()
+        print(tweet_record.user.screen_name + ': ' + tweet_record.text)
         return tweet_record
 
     def clean_tweet(self, tweet):
@@ -202,7 +210,7 @@ if __name__ == '__main__':
                     acceptable_tweet = bot._is_acceptable(tweet, ht, picky=args['picky'])
                     if acceptable_tweet:
                         last_tweets += [bot.save_tweet(acceptable_tweet)]
-                print(json.dumps(last_tweets, default=model.Serializer(), indent=2))
+                # print(json.dumps(last_tweets, default=model.Serializer(), indent=2))
             except:
                 print('!' * 80)
                 print(format_exc())

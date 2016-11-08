@@ -15,7 +15,7 @@ class BaseModel(pw.Model):
 
 class Place(BaseModel):
     """Twitter API json "place" key"""
-    id = pw.CharField()
+    id_str = pw.CharField()
     place_type = pw.CharField(null=True)
     country_code = pw.CharField(null=True)
     country = pw.CharField(null=True)
