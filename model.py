@@ -3,6 +3,7 @@ from collections import Mapping
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict, dict_to_model
+import pandas as pd
 
 
 db = pw.SqliteDatabase('tweets.db')
@@ -26,7 +27,7 @@ class Place(BaseModel):
 
 
 class User(BaseModel):
-    id = pw.BigIntegerField(null=True)  # v4
+    id_str = pw.CharField(null=True)  # v4
     screen_name = pw.CharField(null=True)
     verified = pw.BooleanField(null=True)  # v4
     time_zone = pw.CharField(null=True)  # v4
@@ -53,6 +54,16 @@ class Tweet(BaseModel):
     location = pw.CharField(null=True)
     place = pw.ForeignKeyField(Place, null=True)
     favorite_count = pw.IntegerField(default=0)
+
+
+def tweets_to_df():
+    tweets = []
+    for t in Tweet.select():
+        try:
+            tweets += [(t.user.screen_name, t.text, t.tags, t.favorite_count, t.user.followers_count, t.user.friends_count, t.user.statuses_count)]
+        except:
+            tweets += [(None, t.text, t.tags, t.favorite_count, None, None, None)]
+    return pd.DataFrame(tweets)
 
 
 def create_tables():

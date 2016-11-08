@@ -82,9 +82,9 @@ class Bot:
 
         # Find or create the user that tweeted
         try:
-            user = model.User.get(id=tweet.user.id)
+            user = model.User.get(id_str=str(tweet.user.id))
         except model.User.DoesNotExist:
-            user = model.User(id=tweet.user.id)
+            user = model.User(id_str=str(tweet.user.id))
         user.verified = tweet.user.verified  # v4
         user.time_zone = tweet.user.time_zone  # v4
         user.utc_offset = tweet.user.utc_offset  # -28800 (v4)
