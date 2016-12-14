@@ -3,7 +3,9 @@ from collections import Mapping
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict, dict_to_model
+from playhouse.csv_utils import dump_csv
 import pandas as pd
+import gzip
 
 
 db = pw.SqliteDatabase('tweets.db')
@@ -64,6 +66,15 @@ def tweets_to_df():
         except:
             tweets += [(None, t.text, t.tags, t.favorite_count, None, None, None)]
     return pd.DataFrame(tweets)
+
+
+def dump_tweets(name='twitterbot'):
+    with gzip.open(name + '-tweets-2016-12-11.csv.gz', 'w') as fout:
+        query = Tweet.select()
+        dump_csv(query, fout)
+    with gzip.open(name + '-tweets-2016-12-11.csv.gz', 'w') as fout:
+        query = User.select()
+        dump_csv(query, fout)
 
 
 def create_tables():
