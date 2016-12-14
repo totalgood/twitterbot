@@ -1,5 +1,4 @@
 secrets.py
 __pycache__
-tweets.db
-peewee.db
-
+*.pyc
+*.db
