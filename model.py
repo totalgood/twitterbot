@@ -6,9 +6,10 @@ from playhouse.shortcuts import model_to_dict, dict_to_model
 from playhouse.csv_utils import dump_csv
 import pandas as pd
 import gzip
-
+from secrets import DB_NAME, DB_PASSWORD, DB_USER
 
 db = pw.SqliteDatabase('tweets.db')
+psql_db = pw.PostgresqlDatabase(DB_NAME, user=DB_USER, password=DB_PASSWORD)
 
 
 class BaseModel(pw.Model):
@@ -80,6 +81,27 @@ def dump_tweets(name='twitterbot'):
 def create_tables():
     db.connect()
     db.create_tables([Place, User, Tweet])
+
+
+def copy_tweets(from_db, to_db):
+    for table in (Tweet, User, Place):
+
+        print('=' * 100)
+        print('Copying {}s'.format(table))
+
+        class FromTable(table):
+            class Meta:
+                database = from_db
+
+        class ToTable(table):
+            class Meta:
+                database = to_db
+
+        query = FromTable.select()
+        N = query.count()
+        for i, obj in enumerate(query):
+            print('Saving {}: {}'.format(round(i * 100. / N, 1), obj))
+            ToTable(obj).save()
 
 
 class Serializer(object):
