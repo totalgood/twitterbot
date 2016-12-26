@@ -83,24 +83,31 @@ def create_tables():
     db.create_tables([Place, User, Tweet])
 
 
-def copy_tweets(from_db, to_db):
-    for table in (Tweet, User, Place):
+def copy_tweets(from_db, to_db, tables=(User, Place, Tweet)):
+    for cls in tables:
 
         print('=' * 100)
-        print('Copying {}s'.format(table))
+        print('Copying {}s'.format(cls))
 
-        class FromTable(table):
-            class Meta:
-                database = from_db
+        FromTable = cls
+        FromTable._meta.database = from_db
 
-        class ToTable(table):
-            class Meta:
-                database = to_db
+        ToTable = cls
+        ToTable._meta.database = to_db
+        # class FromTable(table):
+        #     class Meta:
+        #         database = from_db
+
+        # class ToTable(table):
+        #     class Meta:
+        #         database = to_db
 
         query = FromTable.select()
         N = query.count()
         for i, obj in enumerate(query):
-            print('Saving {}: {}'.format(round(i * 100. / N, 1), obj))
+            if not i % 1000:
+                N = FromTable.select.count()
+            print('Saving {:08d}/{08d} {}: {}'.format(i, N, round(i * 100. / N, 1), obj))
             ToTable(obj).save()
 
 
